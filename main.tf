@@ -41,16 +41,20 @@ resource "azurerm_network_interface_security_group_association" "connectSGtoNic"
   ]
 }
 
-resource "azurerm_windows_virtual_machine" "example" {
+resource "azurerm_linux_virtual_machine" "example" {
   name                     = var.hostname
   resource_group_name      = azurerm_resource_group.compute-rg.name
   location                 = var.location
   size                     = var.intance_type
   admin_username      = "adminuser"
-  admin_password      = "P@$$w0rd1234!"
   network_interface_ids = [
     azurerm_network_interface.NIC.id,
   ]
+
+  admin_ssh_key {
+    username   = "adminuser"
+    public_key = file("~/.ssh/id_rsa.pub")
+  }
 
   os_disk {
     name                   = "${var.hostname}-osdisk"
@@ -60,9 +64,9 @@ resource "azurerm_windows_virtual_machine" "example" {
   }
 
   source_image_reference {
-    publisher = "MicrosoftWindowsServer"
-    offer     = "WindowsServer"
-    sku       = "2016-Datacenter"
+    publisher = "Canonical"
+    offer     = "UbuntuServer"
+    sku       = "16.04-LTS"
     version   = "latest"
   }
 
@@ -91,12 +95,12 @@ resource "azurerm_virtual_machine_data_disk_attachment" "disk1" {
   for_each = var.data_disks
 
   managed_disk_id    = azurerm_managed_disk.managed_disk[each.key].id
-  virtual_machine_id = azurerm_windows_virtual_machine.example.id
+  virtual_machine_id = azurerm_linux_virtual_machine.example.id
   lun                = each.value.lun
   caching            = each.value.caching
 
   depends_on = [
     azurerm_managed_disk.managed_disk,
-    azurerm_windows_virtual_machine.example
+    azurerm_linux_virtual_machine.example
   ]
 }
